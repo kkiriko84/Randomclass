@@ -129,9 +129,26 @@
           </button>
         </div>
 
+        <!-- 구글 시트 연동 설정란 -->
+        <div class="mt-5 pt-5 border-t-2 border-dashed border-pink-100">
+          <h3 class="text-lg font-bold text-pink-500 mb-2 flex items-center gap-1.5">
+            📊 구글 시트 연동 (선택)
+          </h3>
+          <div class="mb-3">
+            <label for="gasUrlInput" class="block text-xs text-pink-400 font-semibold mb-1">앱스 스크립트 웹앱 URL</label>
+            <input type="text" id="gasUrlInput" oninput="saveGasUrl()"
+              class="w-full p-2.5 text-xs border-2 border-pink-100 rounded-xl focus:outline-none focus:border-pink-300 focus:ring-2 focus:ring-pink-100 bg-pink-50/20 placeholder-pink-200 transition-all duration-200"
+              placeholder="https://script.google.com/macros/s/.../exec">
+          </div>
+          <button id="sheetSaveBtn" onclick="sendSeatingToGoogleSheet()" 
+            class="w-full py-2.5 bg-[#0f9d58] text-white font-bold text-base rounded-xl shadow-[0_3px_0_#0b7843] hover:translate-y-0.5 hover:shadow-[0_1px_0_#0b7843] transition-all duration-150 flex items-center justify-center gap-1.5">
+            📊 구글 시트에 저장하기
+          </button>
+        </div>
+
         <!-- 초기화 단추 (공통) -->
         <button onclick="resetAll()" 
-          class="w-full mt-3 py-3 bg-amber-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_0_#d97706] hover:translate-y-1 hover:shadow-[0_1px_0_#d97706] transition-all duration-150 flex items-center justify-center gap-2">
+          class="w-full mt-4 py-3 bg-amber-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_0_#d97706] hover:translate-y-1 hover:shadow-[0_1px_0_#d97706] transition-all duration-150 flex items-center justify-center gap-2">
           🔄 명단 비우기
         </button>
       </div>
@@ -676,8 +693,73 @@
       }, 300);
     }
 
+    // ==========================================
+    // 📊 구글 스프레드시트 연동 함수들
+    // ==========================================
+    function saveGasUrl() {
+      const url = document.getElementById('gasUrlInput').value.trim();
+      localStorage.setItem('gasUrl', url);
+    }
+
+    function loadGasUrl() {
+      const url = localStorage.getItem('gasUrl') || "";
+      document.getElementById('gasUrlInput').value = url;
+    }
+
+    async function sendSeatingToGoogleSheet() {
+      const gasUrl = document.getElementById('gasUrlInput').value.trim();
+      if (!gasUrl) {
+        alert("구글 시트 연동 URL을 먼저 입력해줘! 🥺\n(설정 방법은 폴더 안의 google-apps-script-guide.md 파일을 참고해봐!)");
+        return;
+      }
+
+      if (currentSeating.length === 0) {
+        alert("자리 배치를 먼저 완료한 후에 저장해줘! ❤️");
+        return;
+      }
+
+      const rows = parseInt(document.getElementById('rows').value) || 2;
+      const cols = parseInt(document.getElementById('cols').value) || 4;
+      const sheetSaveBtn = document.getElementById('sheetSaveBtn');
+      
+      const originalText = sheetSaveBtn.innerHTML;
+      sheetSaveBtn.disabled = true;
+      sheetSaveBtn.innerText = "⏳ 전송 중...";
+
+      try {
+        const payload = {
+          rows: rows,
+          cols: cols,
+          seating: currentSeating
+        };
+
+        // preflight OPTIONS 방지를 위해 text/plain으로 전송
+        await fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors', // redirect 및 cross-origin 대응
+          redirect: 'follow',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // no-cors의 경우 성공 여부 조회가 불가능하지만 완료된 것으로 처리
+        playConfetti();
+        alert("구글 시트에 성공적으로 보냈어! 💚\n스프레드시트에서 확인해봐!");
+
+      } catch (err) {
+        console.error("구글 시트 전송 실패:", err);
+        alert("구글 시트 전송 중 오류가 발생했어! 😢\nURL 주소를 다시 확인해줘.");
+      } finally {
+        sheetSaveBtn.disabled = false;
+        sheetSaveBtn.innerHTML = originalText;
+      }
+    }
+
     // 초기 화면 빌드 (예시 학생 정보로 그리드 채움)
     window.onload = () => {
+      loadGasUrl();
       const defaultNames = ["김하은", "이서연", "박지민", "최예원", "정다정", "윤지우", "한소희", "임수빈"];
       document.getElementById('studentInput').value = defaultNames.join('\n');
       
