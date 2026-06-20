@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✨ 두근두근 우리 반 자리 배치 & 룰렛 ✨</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Jua -->
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+  <!-- html2canvas (이미지 저장용) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- canvas-confetti (배치 완료 파티클 효과) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Jua', sans-serif;
+      background-image: 
+        radial-gradient(#ffdfeb 1px, transparent 1px), 
+        radial-gradient(#ffdfeb 1px, transparent 1px);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+      background-color: #fff5f8;
+    }
+    
+    /* 젤리 바운스 애니메이션 */
+    @keyframes jelly {
+      0%, 100% { transform: scale(1, 1); }
+      30% { transform: scale(1.25, 0.75); }
+      40% { transform: scale(0.75, 1.25); }
+      50% { transform: scale(1.15, 0.85); }
+      65% { transform: scale(0.95, 1.05); }
+      75% { transform: scale(1.05, 0.95); }
+    }
+    .jelly-effect {
+      animation: jelly 0.6s ease-in-out;
+    }
+
+    /* 커스텀 스크롤바 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #ffeef3;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #ffb8d1;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ff9ebb;
+    }
+
+    /* 룰렛 핀 회전 진동 */
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-15deg); }
+    }
+    .wiggle-effect {
+      animation: wiggle 0.15s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-700 flex flex-col items-center py-8 px-4 sm:px-6">
+
+  <!-- 메인 헤더 타이틀 -->
+  <div class="text-center mb-8 relative">
+    <span class="absolute -top-6 -left-6 text-4xl animate-bounce">🎈</span>
+    <span class="absolute -bottom-6 -right-6 text-4xl animate-bounce" style="animation-delay: 0.3s">🎀</span>
+    <h1 class="text-4xl sm:text-5xl font-extrabold text-pink-500 drop-shadow-[0_2px_2px_rgba(255,182,193,0.8)] tracking-wider">
+      💖 두근두근 우리 반 교실 메이트 💖
+    </h1>
+    <p class="text-pink-400 mt-2 text-lg sm:text-xl">자리 배치와 룰렛 뽑기를 한 번에! 오늘도 두근두근한 하루 시작! ✨</p>
+  </div>
+
+  <!-- 메인 다이어리 레이아웃 컨테이너 -->
+  <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    
+    <!-- 1. 제어판 (좌측 다이어리 속지) -->
+    <div class="lg:col-span-4 bg-white border-4 border-pink-200 rounded-3xl p-6 shadow-[0_8px_0_#ffdae7] relative overflow-hidden">
+      <!-- 귀여운 스프링 노트 데코레이션 -->
+      <div class="absolute top-0 left-6 right-6 h-4 flex justify-between -translate-y-2">
+        <div class="w-3 h-6 bg-pink-300 rounded-full"></div>
+        <div class="w-3 h-6 bg-pink-300 rounded-full"></div>
+        <div class="w-3 h-6 bg-pink-300 rounded-full"></div>
+        <div class="w-3 h-6 bg-pink-300 rounded-full"></div>
+        <div class="w-3 h-6 bg-pink-300 rounded-full"></div>
+        <div class="w-3 h-6 bg-pink-300 rounded-full"></div>
+      </div>
+
+      <div class="mt-2">
+        <h2 class="text-2xl font-bold text-pink-500 mb-4 flex items-center gap-2">
+          📝 명단 & 자리 설정
+        </h2>
+
+        <!-- 학생 입력 -->
+        <div class="mb-4">
+          <label for="studentInput" class="block text-pink-400 font-semibold mb-2">학생 이름 (한 줄에 한 명씩 적어줘!)</label>
+          <textarea id="studentInput" rows="8" oninput="onStudentListChange()"
+            class="w-full p-4 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-2 focus:ring-pink-100 resize-none text-base placeholder-pink-200 bg-pink-50/30 transition-all duration-200"
+            placeholder="김하은&#10;이서연&#10;박지민&#10;최예원&#10;정다정&#10;윤지우&#10;한소희&#10;임수빈"></textarea>
+        </div>
+
+        <!-- 행 / 열 설정 (직관적으로 가로/세로 매핑 수정) -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label for="cols" class="block text-pink-400 font-semibold mb-1">가로 좌석 수 (열)</label>
+            <input type="number" id="cols" value="4" min="1" max="10" onchange="updateGridDimensions()"
+              class="w-full p-3 text-center border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-2 focus:ring-pink-100 bg-pink-50/30 transition-all duration-200">
+          </div>
+          <div>
+            <label for="rows" class="block text-pink-400 font-semibold mb-1">세로 좌석 수 (행)</label>
+            <input type="number" id="rows" value="2" min="1" max="10" onchange="updateGridDimensions()"
+              class="w-full p-3 text-center border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-2 focus:ring-pink-100 bg-pink-50/30 transition-all duration-200">
+          </div>
+        </div>
+
+        <!-- 실행 버튼들 (자리 배치 전용) -->
+        <div id="seatingControls" class="flex flex-col gap-3">
+          <button onclick="triggerRandomShuffle()" 
+            class="w-full py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-bold text-xl rounded-2xl shadow-[0_4px_0_#e07b93] hover:translate-y-1 hover:shadow-[0_1px_0_#e07b93] transition-all duration-150 flex items-center justify-center gap-2">
+            ❤️ 두근두근 자리 배치!
+          </button>
+          <button id="saveBtn" onclick="saveSeatingAsImage()" 
+            class="w-full py-3 bg-indigo-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_0_#6366f1] hover:translate-y-1 hover:shadow-[0_1px_0_#6366f1] transition-all duration-150 flex items-center justify-center gap-2">
+            📸 배치 결과 앨범에 저장
+          </button>
+        </div>
+
+        <!-- 초기화 단추 (공통) -->
+        <button onclick="resetAll()" 
+          class="w-full mt-3 py-3 bg-amber-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_0_#d97706] hover:translate-y-1 hover:shadow-[0_1px_0_#d97706] transition-all duration-150 flex items-center justify-center gap-2">
+          🔄 명단 비우기
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. 메인 컨텐츠 영역 (우측 다이어리 속지 + 탭 레이아웃) -->
+    <div class="lg:col-span-8 bg-white border-4 border-pink-200 rounded-3xl p-6 shadow-[0_8px_0_#ffdae7] relative min-h-[550px] flex flex-col">
+      
+      <!-- 귀여운 탭 헤더 -->
+      <div class="flex gap-2 mb-6 border-b-2 border-pink-100 pb-2">
+        <button id="tabSeating" onclick="switchTab('seating')"
+          class="px-6 py-2.5 rounded-t-2xl font-bold text-lg transition-all duration-200 bg-pink-400 text-white shadow-sm flex items-center gap-1.5">
+          💖 자리 배치
+        </button>
+        <button id="tabRoulette" onclick="switchTab('roulette')"
+          class="px-6 py-2.5 rounded-t-2xl font-bold text-lg transition-all duration-200 bg-pink-50 text-pink-400 hover:bg-pink-100/50 flex items-center gap-1.5">
+          🎡 룰렛 뽑기
+        </button>
+      </div>
+
+      <!-- [콘텐츠 1] 자리 배치도 -->
+      <div id="seatingTabContent" class="flex flex-col items-center flex-grow">
+        <div id="seatingArea" class="w-full bg-[#fffcf5] border-4 border-dashed border-amber-200 rounded-2xl p-6 flex flex-col items-center relative flex-grow">
+          <!-- 배경 다꾸 스티커 느낌 데코 -->
+          <div class="absolute -top-3 -left-3 text-3xl select-none">⭐</div>
+          <div class="absolute -bottom-3 -right-3 text-3xl select-none">🌙</div>
+          <div class="absolute top-2 right-2 text-2xl select-none">🦄</div>
+
+          <!-- 칠판/교탁 영역 -->
+          <div class="w-full max-w-md bg-zinc-800 text-stone-100 text-center py-3 px-6 rounded-2xl shadow-md border-4 border-amber-900 mb-8 relative font-bold text-lg tracking-widest">
+            <div class="absolute top-1 left-2 text-xs text-stone-400">🏫 Class blackboard</div>
+            👩‍🏫 선생님 말씀에 귀를 기울여요! (칠판)
+            <div class="absolute bottom-1 right-2 text-xs text-stone-400">앞쪽</div>
+          </div>
+
+          <!-- 자리 배치 그리드 컨테이너 -->
+          <div id="seatingGrid" class="w-full grid gap-4 transition-all duration-300">
+            <!-- 동적으로 생성되는 좌석 카드들 -->
+          </div>
+        </div>
+
+        <!-- 인터랙티브 팁 문구 -->
+        <p class="text-pink-400 mt-4 text-sm sm:text-base flex items-center gap-1 animate-pulse justify-center">
+          💡 배치가 완료된 카드를 <strong>드래그해서 다른 친구나 빈자리로 자리를 바꿀 수 있어!</strong>
+        </p>
+      </div>
+
+      <!-- [콘텐츠 2] 룰렛 뽑기 -->
+      <div id="rouletteTabContent" class="hidden flex flex-col items-center justify-center flex-grow py-4">
+        <div class="relative bg-amber-50/50 border-4 border-dashed border-pink-200 rounded-2xl p-8 w-full max-w-lg flex flex-col items-center shadow-inner">
+          
+          <!-- 룰렛 포인터 핀 데코 🎀 -->
+          <div id="roulettePointer" class="absolute -top-2 z-10 transition-transform duration-100 origin-bottom" style="transform: translateX(0px);">
+            <div class="text-4xl filter drop-shadow">👇</div>
+          </div>
+          
+          <!-- 룰렛 캔버스 -->
+          <div class="bg-white rounded-full p-3 shadow-lg border-4 border-pink-100 relative mb-6">
+            <canvas id="rouletteCanvas" width="340" height="340" class="rounded-full"></canvas>
+            <!-- 룰렛 중앙 하트 커버 -->
+            <div class="absolute inset-0 m-auto w-12 h-12 bg-pink-400 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white text-xl">
+              💖
+            </div>
+          </div>
+
+          <!-- 룰렛 시작 단추 -->
+          <button id="spinBtn" onclick="spinRoulette()" 
+            class="px-10 py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-bold text-xl rounded-2xl shadow-[0_4px_0_#e07b93] hover:translate-y-1 hover:shadow-[0_1px_0_#e07b93] transition-all duration-150 flex items-center justify-center gap-2">
+            🎡 돌려돌려 룰렛!
+          </button>
+        </div>
+
+        <p class="text-pink-400 mt-4 text-sm sm:text-base text-center">
+          💡 명단에 입력된 친구들로 룰렛 판이 자동으로 채워져!
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- 당첨 팝업 모달 -->
+  <div id="winnerModal" class="fixed inset-0 bg-pink-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white border-4 border-pink-300 rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl relative text-center transform scale-90 transition-transform duration-300">
+      <span class="absolute -top-12 left-1/2 -translate-x-1/2 text-6xl">🎉</span>
+      <h3 class="text-2xl font-bold text-pink-500 mb-2">오늘의 주인공!</h3>
+      <p class="text-pink-300 mb-6">축하해요! 오늘의 주인공으로 당첨되었습니다!</p>
+      
+      <!-- 당첨자 이름 출력 박스 -->
+      <div class="bg-pink-50 border-2 border-pink-100 rounded-2xl py-6 px-4 mb-6 shadow-inner">
+        <span id="winnerName" class="text-4xl font-extrabold text-pink-600 drop-shadow-sm">홍길동</span>
+      </div>
+
+      <button onclick="closeWinnerModal()" 
+        class="w-full py-3 bg-pink-400 text-white font-bold text-lg rounded-2xl shadow-[0_4px_0_#db5b81] hover:translate-y-1 hover:shadow-[0_1px_0_#db5b81] transition-all duration-150 flex items-center justify-center">
+        하트 뿅! 닫기 💕
+      </button>
+    </div>
+  </div>
+
+  <footer class="mt-12 text-pink-300 text-sm">
+    🎀 2026 우리 반만의 예쁜 소통 공간 | Created with Love 🎀
+  </footer>
+
+  <script>
+    // 전역 배치 현황 상태 및 룰렛 상태
+    let currentSeating = [];
+    let draggedIndex = null;
+    let activeTab = 'seating';
+
+    // 룰렛 변수
+    let rouletteAngle = 0;
+    let rouletteSpeed = 0;
+    let rouletteFriction = 0.985;
+    let isSpinning = false;
+    const rouletteColors = ['#ffccd5', '#ffebf0', '#f3d8f8', '#e8f0fe', '#fff0cc', '#e2f9f3', '#ffe3ec', '#ebd9fc'];
+
+    // 1. 피셔-예이츠 무작위 셔플 알고리즘
+    function shuffle(array) {
+      let currentIndex = array.length, randomIndex;
+      while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+      }
+      return array;
+    }
+
+    // 2. 입력 데이터 가져오기
+    function getStudents() {
+      const textarea = document.getElementById('studentInput');
+      return textarea.value.split('\n').map(name => name.trim()).filter(name => name !== "");
+    }
+
+    // 3. 탭 변경 제어
+    function switchTab(tabName) {
+      activeTab = tabName;
+      const tabSeating = document.getElementById('tabSeating');
+      const tabRoulette = document.getElementById('tabRoulette');
+      const seatingContent = document.getElementById('seatingTabContent');
+      const rouletteContent = document.getElementById('rouletteTabContent');
+      const seatingControls = document.getElementById('seatingControls');
+
+      if (tabName === 'seating') {
+        tabSeating.className = "px-6 py-2.5 rounded-t-2xl font-bold text-lg transition-all duration-200 bg-pink-400 text-white shadow-sm flex items-center gap-1.5";
+        tabRoulette.className = "px-6 py-2.5 rounded-t-2xl font-bold text-lg transition-all duration-200 bg-pink-50 text-pink-400 hover:bg-pink-100/50 flex items-center gap-1.5";
+        seatingContent.classList.remove('hidden');
+        rouletteContent.classList.add('hidden');
+        seatingControls.classList.remove('hidden');
+      } else {
+        tabRoulette.className = "px-6 py-2.5 rounded-t-2xl font-bold text-lg transition-all duration-200 bg-pink-400 text-white shadow-sm flex items-center gap-1.5";
+        tabSeating.className = "px-6 py-2.5 rounded-t-2xl font-bold text-lg transition-all duration-200 bg-pink-50 text-pink-400 hover:bg-pink-100/50 flex items-center gap-1.5";
+        rouletteContent.classList.remove('hidden');
+        seatingContent.classList.add('hidden');
+        seatingControls.classList.add('hidden');
+        
+        // 룰렛 원판 그리기
+        drawRouletteWheel();
+      }
+    }
+
+    // 명단 입력 변경 시 실시간 반영
+    function onStudentListChange() {
+      if (activeTab === 'roulette') {
+        drawRouletteWheel();
+      } else {
+        const students = getStudents();
+        const rows = parseInt(document.getElementById('rows').value) || 2;
+        const cols = parseInt(document.getElementById('cols').value) || 4;
+        currentSeating = fillEmptySeats(students, rows * cols);
+        renderGrid(currentSeating);
+      }
+    }
+
+    // 행/열 규격 변경 시 실시간 그리드 반영
+    function updateGridDimensions() {
+      const students = getStudents();
+      const rows = parseInt(document.getElementById('rows').value) || 2;
+      const cols = parseInt(document.getElementById('cols').value) || 4;
+      currentSeating = fillEmptySeats(students, rows * cols);
+      renderGrid(currentSeating);
+    }
+
+    // 4. 그리드 및 카드 동적 렌더링 (가로-열, 세로-행 매핑 올바르게 수정)
+    function renderGrid(shuffledStudents = []) {
+      const rows = parseInt(document.getElementById('rows').value) || 2;
+      const cols = parseInt(document.getElementById('cols').value) || 4;
+      const gridContainer = document.getElementById('seatingGrid');
+      
+      // 가로 좌석수(cols)를 grid-template-columns에 정상 매핑
+      gridContainer.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+      gridContainer.innerHTML = '';
+
+      const totalSeats = rows * cols;
+
+      for (let i = 0; i < totalSeats; i++) {
+        const studentName = shuffledStudents[i];
+        const isEmpty = !studentName;
+        
+        const seatDiv = document.createElement('div');
+        seatDiv.className = "relative bg-white border-2 rounded-2xl p-4 text-center font-bold text-slate-700 shadow-sm flex flex-col items-center justify-center min-h-[90px] transition-all duration-300 select-none hover:rotate-1 hover:shadow-md active:scale-95";
+        
+        // 공통 드롭 대상(dropzone) 이벤트 바인딩
+        seatDiv.addEventListener('dragover', (e) => {
+          e.preventDefault();
+        });
+
+        seatDiv.addEventListener('dragenter', (e) => {
+          e.preventDefault();
+          seatDiv.classList.add('bg-pink-100', 'border-pink-300', 'scale-105');
+        });
+
+        seatDiv.addEventListener('dragleave', () => {
+          seatDiv.classList.remove('bg-pink-100', 'border-pink-300', 'scale-105');
+        });
+
+        seatDiv.addEventListener('drop', (e) => {
+          e.preventDefault();
+          seatDiv.classList.remove('bg-pink-100', 'border-pink-300', 'scale-105');
+          const targetIndex = i;
+          
+          if (draggedIndex !== null && draggedIndex !== targetIndex) {
+            // 데이터 교환
+            const temp = currentSeating[draggedIndex];
+            currentSeating[draggedIndex] = currentSeating[targetIndex];
+            currentSeating[targetIndex] = temp;
+
+            // 리렌더링
+            renderGrid(currentSeating);
+          }
+        });
+
+        // 폴라로이드 사진 프레임 느낌 데코 적용
+        if (isEmpty) {
+          seatDiv.classList.add('border-dashed', 'border-pink-100', 'bg-pink-50/20');
+          
+          const emojiSpan = document.createElement('span');
+          emojiSpan.className = "text-xl mb-1 filter grayscale opacity-40";
+          emojiSpan.innerText = "💤";
+          
+          const labelSpan = document.createElement('span');
+          labelSpan.className = "text-xs text-pink-300 font-semibold";
+          labelSpan.innerText = "빈자리";
+          
+          seatDiv.appendChild(emojiSpan);
+          seatDiv.appendChild(labelSpan);
+        } else {
+          seatDiv.classList.add('border-pink-200', 'cursor-grab', 'hover:scale-105');
+          
+          // 파스텔 상단 띠지 데코
+          const colorStrip = document.createElement('div');
+          const strips = ['bg-pink-300', 'bg-purple-300', 'bg-amber-300', 'bg-teal-300'];
+          const pickedStrip = strips[i % strips.length];
+          colorStrip.className = `absolute top-0 left-0 right-0 h-2 rounded-t-2xl ${pickedStrip}`;
+          seatDiv.appendChild(colorStrip);
+
+          // 이모지 아바타 매칭
+          const avatarSpan = document.createElement('span');
+          avatarSpan.className = "text-2xl mb-1";
+          const avatars = ["⭐", "🍀", "🌸", "🧸", "🐰", "🐈", "🍬", "🍒", "🎨", "🥞"];
+          avatarSpan.innerText = avatars[i % avatars.length];
+          seatDiv.appendChild(avatarSpan);
+
+          // 학생 이름
+          const nameSpan = document.createElement('span');
+          nameSpan.className = "text-lg text-slate-800 drop-shadow-sm";
+          nameSpan.innerText = studentName;
+          seatDiv.appendChild(nameSpan);
+
+          // 드래그 속성 부여
+          seatDiv.draggable = true;
+          seatDiv.setAttribute('data-index', i);
+
+          seatDiv.addEventListener('dragstart', (e) => {
+            draggedIndex = i;
+            seatDiv.classList.add('opacity-50', 'scale-90');
+          });
+
+          seatDiv.addEventListener('dragend', () => {
+            seatDiv.classList.remove('opacity-50', 'scale-90');
+            draggedIndex = null;
+          });
+        }
+        
+        gridContainer.appendChild(seatDiv);
+      }
+    }
+
+    // 5. 랜덤 배치 실행 함수
+    function triggerRandomShuffle() {
+      const students = getStudents();
+      if (students.length === 0) {
+        alert("친구들의 이름을 적어줘! 🥰");
+        return;
+      }
+
+      const rows = parseInt(document.getElementById('rows').value) || 2;
+      const cols = parseInt(document.getElementById('cols').value) || 4;
+      const totalSeats = rows * cols;
+      
+      let count = 0;
+      const interval = setInterval(() => {
+        const tempStudents = shuffle([...students]);
+        const paddedStudents = fillEmptySeats(tempStudents, totalSeats);
+        renderGrid(paddedStudents);
+        count++;
+        
+        if (count > 10) {
+          clearInterval(interval);
+          const finalResult = shuffle([...students]);
+          currentSeating = fillEmptySeats(finalResult, totalSeats);
+          renderGrid(currentSeating);
+          
+          // 성공적인 마무리 축하 폭죽 발사 🎉
+          playConfetti();
+        }
+      }, 80);
+    }
+
+    // 빈자리 데이터 채우는 보조 함수
+    function fillEmptySeats(arr, total) {
+      const result = [...arr];
+      while (result.length < total) {
+        result.push("");
+      }
+      return result;
+    }
+
+    // confetti 축하 연출
+    function playConfetti() {
+      const colors = ['#ff8bb5', '#dfa8ff', '#ffd466', '#87f5d9'];
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: colors
+      });
+    }
+
+    // 6. 배치 결과 이미지로 앨범 저장하기
+    function saveSeatingAsImage() {
+      const seatingArea = document.getElementById('seatingArea');
+      const saveBtn = document.getElementById('saveBtn');
+
+      saveBtn.innerText = "📸 앨범에 넣는 중...";
+      saveBtn.disabled = true;
+
+      html2canvas(seatingArea, {
+        backgroundColor: '#fffcf5',
+        scale: 2,
+        useCORS: true
+      }).then(canvas => {
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement('a');
+        link.download = `우리반_자리배치도_${getTodayDate()}.png`;
+        link.href = image;
+        link.click();
+
+        saveBtn.innerText = "📸 배치 결과 앨범에 저장";
+        saveBtn.disabled = false;
+      }).catch(err => {
+        console.error("이미지 저장 실패 :(", err);
+        alert("미안해, 저장 중에 문제가 생겼나봐! 😢");
+        saveBtn.innerText = "📸 배치 결과 앨범에 저장";
+        saveBtn.disabled = false;
+      });
+    }
+
+    // 날짜 포맷 함수
+    function getTodayDate() {
+      const date = new Date();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${month}${day}`;
+    }
+
+    // 명단 비우기 및 상태 초기화
+    function resetAll() {
+      if (confirm("정말 다 지울 거야? 🥺")) {
+        document.getElementById('studentInput').value = "";
+        currentSeating = [];
+        renderGrid();
+        if (activeTab === 'roulette') {
+          drawRouletteWheel();
+        }
+      }
+    }
+
+    // ==========================================
+    // 🎡 룰렛 관련 자바스크립트 로직
+    // ==========================================
+    function drawRouletteWheel() {
+      const canvas = document.getElementById('rouletteCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const students = getStudents();
+      
+      const width = canvas.width;
+      const height = canvas.height;
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = Math.min(width, height) / 2 - 10;
+
+      ctx.clearRect(0, 0, width, height);
+
+      if (students.length === 0) {
+        // 이름이 없을 때의 예비 그림
+        ctx.fillStyle = '#ffeef3';
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#ffb8d1';
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff6b9a';
+        ctx.font = 'bold 20px Jua';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('명단에 학생을 적어줘!', cx, cy);
+        return;
+      }
+
+      const numSegments = students.length;
+      const arcAngle = (Math.PI * 2) / numSegments;
+
+      // 부채꼴 세그먼트 그리기
+      for (let i = 0; i < numSegments; i++) {
+        const startAngle = rouletteAngle + i * arcAngle;
+        const endAngle = startAngle + arcAngle;
+
+        ctx.fillStyle = rouletteColors[i % rouletteColors.length];
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        // 학생 이름 텍스트 렌더링
+        ctx.save();
+        ctx.fillStyle = '#555555';
+        ctx.font = 'bold 16px Jua';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        // 텍스트 위치 조정을 위한 중심 이동
+        ctx.translate(cx, cy);
+        ctx.rotate(startAngle + arcAngle / 2);
+        ctx.fillText(students[i], radius - 30, 0);
+        ctx.restore();
+      }
+
+      // 외곽선 마무리 테두리
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#ffccd5';
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 룰렛 돌리기 트리거
+    function spinRoulette() {
+      const students = getStudents();
+      if (students.length === 0) {
+        alert("룰렛을 채울 친구들 이름을 적어줘! 🥰");
+        return;
+      }
+      if (isSpinning) return;
+
+      isSpinning = true;
+      document.getElementById('spinBtn').disabled = true;
+      document.getElementById('spinBtn').innerText = "🎡 도는 중...";
+
+      // 랜덤 초기 속도 및 핀 진동 효과 부여
+      rouletteSpeed = Math.random() * 0.3 + 0.35; // 0.35 ~ 0.65 사이 속도
+      document.getElementById('roulettePointer').classList.add('wiggle-effect');
+
+      animateRouletteWheel();
+    }
+
+    // 룰렛 회전 프레임 업데이트
+    function animateRouletteWheel() {
+      if (rouletteSpeed > 0.001) {
+        rouletteAngle += rouletteSpeed;
+        rouletteSpeed *= rouletteFriction; // 감속
+        
+        drawRouletteWheel();
+        requestAnimationFrame(animateRouletteWheel);
+      } else {
+        // 완전 정지 시
+        isSpinning = false;
+        document.getElementById('spinBtn').disabled = false;
+        document.getElementById('spinBtn').innerText = "🎡 돌려돌려 룰렛!";
+        document.getElementById('roulettePointer').classList.remove('wiggle-effect');
+
+        // 당첨자 산정
+        const students = getStudents();
+        const numSegments = students.length;
+        const arcAngle = (Math.PI * 2) / numSegments;
+        
+        // 룰렛 포인터 핀이 가리키는 방향 (일반적으로 상단 = -Math.PI / 2 각도)
+        // 캔버스 회전각과 세그먼트 각도로 인덱스 계산
+        let normalizedAngle = (Math.PI * 1.5 - rouletteAngle) % (Math.PI * 2);
+        if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+        
+        const winningIndex = Math.floor(normalizedAngle / arcAngle) % numSegments;
+        const winner = students[winningIndex];
+
+        // 당첨 팝업 띄우고 폭죽 효과
+        showWinner(winner);
+      }
+    }
+
+    // 당첨자 팝업 모달 노출
+    function showWinner(name) {
+      document.getElementById('winnerName').innerText = name;
+      
+      const modal = document.getElementById('winnerModal');
+      modal.classList.remove('hidden');
+      // 트랜지션 애니메이션을 위한 딜레이 처리
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.querySelector('div').classList.remove('scale-90');
+      }, 50);
+
+      // 당첨 축하 캔버 confetti
+      playConfetti();
+    }
+
+    // 모달 닫기
+    function closeWinnerModal() {
+      const modal = document.getElementById('winnerModal');
+      modal.classList.add('opacity-0');
+      modal.querySelector('div').classList.add('scale-90');
+      
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    // 초기 화면 빌드 (예시 학생 정보로 그리드 채움)
+    window.onload = () => {
+      const defaultNames = ["김하은", "이서연", "박지민", "최예원", "정다정", "윤지우", "한소희", "임수빈"];
+      document.getElementById('studentInput').value = defaultNames.join('\n');
+      
+      const rows = parseInt(document.getElementById('rows').value) || 2;
+      const cols = parseInt(document.getElementById('cols').value) || 4;
+      currentSeating = fillEmptySeats(defaultNames, rows * cols);
+      renderGrid(currentSeating);
+    };
+  </script>
+</body>
+</html>
